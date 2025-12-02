@@ -20,10 +20,4 @@ app.use('/api/transactions', transactionRoutes);
 app.listen(PORT, () => {
   console.log(`Server pornit pe http://localhost:${PORT}`);
   
-  // Verifica daca a reusit sa importe conexiunea la BD
-  if (connection.threadId) {
-    console.log('Stare conexiune BD: Activa');
-  } else {
-    console.log('Stare conexiune BD: Inactiva/Eroare');
-  }
 });
