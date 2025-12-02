@@ -1,0 +1,7 @@
+# Directorul de dependente si fisiere de cache
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# Fisiere de Mediu si Securitate (ESENȚIAL)
+.env

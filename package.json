@@ -1,0 +1,22 @@
+{
+  "name": "proiect-ubd-2025-2026-vinterdenis",
+  "version": "1.0.0",
+  "description": "Backend API pentru aplicatia de buget personal (UBD)",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js"
+  },
+  "keywords": [
+    "express",
+    "mysql",
+    "node",
+    "api"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "mysql2": "^3.15.3"
+  }
+}
