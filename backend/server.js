@@ -1,23 +1,22 @@
-require('dotenv').config(); // Incarca variabilele din fisierul .env
+require('dotenv').config(); 
 
 const express = require('express');
-
-// Importa rutele tranzacțiilor din folderul routes/
 const transactionRoutes = require('./routes/transactions'); 
-// Importa obiectul de conexiune la baza de date din folderul app_config/
+const statsRoutes = require('./routes/stats'); 
+const categoryRoutes = require('./routes/categories'); 
 const connection = require('./app_config/db'); 
 
-const app = express();
-const PORT = 3000; 
 
-// Middleware-uri: Configureaza serverul sa citeasca cererile JSON
+const app = express();
+const PORT = process.env.PORT || 3000; 
+
 app.use(express.json()); 
 
-// Rutele API: Leaga ruta principala (/api/transactions) de logica din transactionRoutes
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/stats', statsRoutes); 
 
-// Pornirea serverului
+app.use('/api/categories', categoryRoutes); 
+
 app.listen(PORT, () => {
   console.log(`Server pornit pe http://localhost:${PORT}`);
-  
 });

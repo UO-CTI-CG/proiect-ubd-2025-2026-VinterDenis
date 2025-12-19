@@ -1,20 +1,34 @@
 const mysql = require('mysql2');
+require('dotenv').config();
 
-const connection = mysql.createConnection({
-  host: process.env.DB_HOST,         // Citeste din .env
-  user: process.env.DB_USER,         // Citeste din .env
-  password: process.env.DB_PASSWORD, // <-- Parola securizata
-  database: process.env.DB_DATABASE  // Citeste din .env
+/**
+ * Utilizăm createPool în loc de createConnection.
+ * Un "pool" (rezervă) gestionează automat mai multe conexiuni simultan.
+ * Dacă o conexiune se închide din cauza inactivității, pool-ul deschide
+ * automat alta la următoarea cerere, eliminând erorile de tip "closed state".
+ */
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_DATABASE || 'my_budget',
+  waitForConnections: true,
+  connectionLimit: 10, // Menține până la 10 conexiuni pregătite
+  queueLimit: 0
 });
 
-
-connection.connect(err => {
+// Verificăm dacă baza de date este accesibilă la pornirea serverului
+pool.getConnection((err, connection) => {
   if (err) {
-    console.error('Eroare la conectarea la baza de date: ' + err.stack);
-    return;
+    console.error('Eroare critică la conectarea la baza de date:', err.message);
+  } else {
+    console.log('Conexiune reușită la baza de date!'); //prin Connection Pool
+    connection.release(); // Eliberăm conexiunea înapoi în rezervă
   }
-  console.log('Conexiune reușită la baza de date my_budget!');
 });
 
-// Exporta conexiunea pentru a fi folosita in alte fisiere
-module.exports = connection;
+/**
+ * Exportăm pool-ul. 
+ * Acesta este compatibil cu metoda .query() folosită în Service-ul tău.
+ */
+module.exports = pool;

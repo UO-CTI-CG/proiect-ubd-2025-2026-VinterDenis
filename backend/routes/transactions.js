@@ -1,26 +1,31 @@
 const express = require('express');
 const router = express.Router();
 
-// Importa functia logica pe care am scris-o in transactionService
-const transactionService = require('../services/transactionService'); 
+// Importa Controller-ul
+const transactionController = require('../controllers/transactionController'); 
 
-// RUTA GET /api/transactions/sold-total
-router.get('/sold-total', async (req, res) => {
-    try {
-        // 1. Apeleaza functia din Service si asteapta rezultatul
-        // "await" asteapta ca Promise-ul din transactionService.js sa se rezolve
-        const sold = await transactionService.getSoldTotal();
-        
-        // 2. Returneaza rezultatul in format JSON catre frontend
-        res.json({ 
-            soldTotal: sold 
-        });
-        
-    } catch (error) {
-        // 3. In caz de eroare (ex: conexiune BD esuata), trimite cod 500
-        console.error('Eroare pe ruta /sold-total:', error);
-        res.status(500).send('Eroare la calcularea soldului total.');
-    }
-});
+// --- RUTE DE BAZĂ (I. BAZĂ & MANAGEMENT) ---
+
+// 4. Listarea tuturor tranzacțiilor (GET /api/transactions/all)
+router.get('/all', transactionController.getAllTransactions); 
+
+// 1. Adaugă o tranzacție nouă (POST /api/transactions)
+router.post('/', transactionController.addTransaction); 
+
+// 2. Modifică o tranzacție (PUT /api/transactions/:id)
+router.put('/:id', transactionController.updateTransaction); 
+
+// 3. Șterge o tranzacție (DELETE /api/transactions/:id)
+router.delete('/:id', transactionController.deleteTransaction); 
+
+
+// --- IV. FILTRARE SIMPLĂ (Funcțiile 13 & 14) ---
+
+// 13. Caută tranzacții după text (GET /api/transactions/search?query=...)
+router.get('/search', transactionController.filterByText); 
+
+// 14. Filtrează tranzacțiile după tip (GET /api/transactions/filter/:type)
+router.get('/filter/:type', transactionController.getTransactionsByType);
+
 
 module.exports = router;
