@@ -28,6 +28,8 @@ import {
 } from 'chart.js';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 
+
+
 // Înregistrăm modulele Chart.js
 ChartJS.register(
   CategoryScale,
@@ -43,7 +45,7 @@ ChartJS.register(
 );
 
 // --- CONFIGURARE API ---
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'http://localhost:5000/api';
 
 const MONTHS = [
   "Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie",
@@ -422,68 +424,172 @@ const deleteCategory = async (id) => {
     </div>
   );
 
-  const AnalyticsView = () => {
-    const savingsRate = periodStats.income > 0 ? Math.round((periodStats.balance / periodStats.income) * 100) : 0;
+const AnalyticsView = () => {
+  // 1. Calculăm rata de economisire
+  const savingsRate = useMemo(() => {
+    const income = Number(periodStats?.income) || 0;
+    const balance = Number(periodStats?.balance) || 0;
+    if (income <= 0) return 0;
+    const rate = Math.round((balance / income) * 100);
+    return Math.max(0, Math.min(100, rate));
+  }, [periodStats]);
+
+  // 2. Stări locale pentru AI
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [aiText, setAiText] = useState("");
+
+  // 3. Funcția care apelează backend-ul Gemini
+  const generateAIReport = async () => {
+    setLoadingAI(true);
+    setAiText("");
+    try {
+      // Trimitem luna și anul selectate în interfață către backend
+      const res = await fetch(`${API_BASE_URL}/ai/financial-report?month=${selectedMonth}&year=${selectedYear}`);
+      const data = await res.json();
+      
+      if (res.ok) {
+        setAiText(data.text);
+      } else {
+        setAiText(data.text || "Nu s-a putut genera analiza.");
+      }
+    } catch (err) {
+      console.error("Eroare AI:", err);
+      setAiText("Eroare la conectarea cu serviciul AI. Verifică dacă serverul backend (port 5000) rulează.");
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
+    // 2. Identificăm categoria principală de cheltuieli
+    const mainCategory = topCategories && topCategories.length > 0 
+      ? topCategories[0].category_name 
+      : 'Altele';
+
+    // 3. Calculăm potențialul de economisire (10% din cheltuieli)
+    const potentialSavings = formatRON(Number(periodStats?.expense || 0) * 0.1);
+
     return (
       <div className="animate-in">
-        <h2 className="fw-bold mb-4">Predicții Inteligente AI</h2>
+        <h2 className="fw-bold mb-4 text-dark">Analiză și Predicții AI</h2>
         <Row className="g-4">
           <Col md={8}>
+            {/* FORECAST CARD */}
             <Card className="border-0 shadow-sm rounded-4 p-5 bg-white mb-4">
               <h5 className="fw-bold mb-4 d-flex align-items-center gap-3">
-                <Brain className="text-success" size={24} /> Forecast Sold Viitor
+                <Brain className="text-success" size={40} /> Forecast Sold Viitor
               </h5>
+              <p className="text-muted small mb-4">Algoritmul estimează evoluția averii tale bazat pe media profitului lunar.</p>
               {(forecast || []).length > 0 ? (
                 forecast.map((f, i) => (
-                  <div key={i} className="p-4 bg-light rounded-4 d-flex justify-content-between align-items-center mb-3 border border-white">
+                  <div key={i} className="p-4 bg-light rounded-4 d-flex justify-content-between align-items-center mb-3 border border-white shadow-sm">
                     <div className="d-flex align-items-center gap-3">
                       <div className="bg-success bg-opacity-10 p-2 rounded-3 text-success"><Calendar size={20}/></div>
-                      <span className="fw-bold text-dark fs-5">Peste {f.month_projection} luni</span>
+                      <span className="fw-bold text-dark fs-5">Peste {f.month_projection} {f.month_projection === 1 ? 'lună' : 'luni'}</span>
                     </div>
-                    <span className="h4 mb-0 fw-bold text-success">{formatRON(f.projected_sold)}</span>
+                    <span className="h4 mb-0 fw-bold text-success">
+                      {formatRON(Number(f.projected_sold) || 0)}
+                    </span>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-4 text-muted border rounded-4 border-dashed">Insuficiente date în MySQL pentru proiecții.</div>
+                <div className="text-center py-4 text-muted border rounded-4 border-dashed bg-light">
+                  Insuficiente date în MySQL pentru a genera proiecții financiare.
+                </div>
               )}
             </Card>
+
+            {/* TREND GRAPH */}
             <Card className="border-0 shadow-sm rounded-4 p-4 bg-white">
-              <h5 className="fw-bold mb-4 text-dark">Trend Profit Net (Real)</h5>
+              <h5 className="fw-bold mb-4 text-dark">Trend Profit Real (Venituri - Cheltuieli)</h5>
               <div style={{ height: '300px' }}>
                 <Line 
                   data={{
                     labels: (monthlyFlow || []).map(f => `${MONTHS[f.month - 1]}`),
                     datasets: [{
                       label: 'Profit Net',
-                      data: (monthlyFlow || []).map(f => f.total_income - f.total_expense),
+                      data: (monthlyFlow || []).map(f => Number(f.total_income) - Number(f.total_expense)),
                       fill: true,
                       backgroundColor: 'rgba(34, 197, 94, 0.1)',
                       borderColor: '#22c55e',
-                      tension: 0.4
+                      tension: 0.4,
+                      pointRadius: 4
                     }]
                   }} 
-                  options={{ maintainAspectRatio: false, plugins: { legend: { display: false } } }}
+                  options={{ 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                  }}
                 />
               </div>
             </Card>
           </Col>
+
+          {/* SMART ADVISOR CARD */}
           <Col md={4}>
-            <Card className="border-0 shadow-sm rounded-4 text-white p-4 h-100 position-relative overflow-hidden" style={{ backgroundColor: '#1e293b' }}>
-              <div className="position-absolute top-0 end-0 p-3 opacity-10"><Brain size={150}/></div>
+            <Card className="border-0 shadow-sm rounded-4 text-white p-4 h-100 position-relative overflow-hidden shadow-lg" style={{ backgroundColor: '#0f172a' }}>
+              <div className="position-absolute top-0 end-0 p-3 opacity-10"><Brain size={73}/></div>
               <h5 className="fw-bold mb-3 d-flex align-items-center gap-2"><Info size={20} className="text-info"/> Smart Advisor</h5>
-              <p className="small text-secondary lh-lg mb-4">
-                Salut, Denis! Analizând datele tale reale din MySQL pentru {MONTHS[selectedMonth]}, observ că bugetul tău este stabil. Reducând cheltuielile din categoria <strong>{topCategories[0]?.category_name || 'Altele'}</strong>, rata de economisire ar crește substanțial.
-              </p>
-              <div className="p-3 bg-white bg-opacity-5 rounded-4 border border-white border-opacity-10 mb-4">
-                <div className="d-flex justify-content-between small mb-2">
-                  <span>Rata de economisire reală</span>
-                  <span className="text-success font-bold">{savingsRate}%</span>
-                </div>
-                <ProgressBar now={savingsRate} variant="success" style={{ height: '8px' }} />
-              </div>
-              <button className="btn btn-success w-100 py-3 rounded-4 fw-bold border-0 mt-auto shadow-success">
-                <BarChart3 size={18} className="me-2"/> Raport Complet MySQL
-              </button>
+
+
+
+
+<div className="position-relative" style={{ zIndex: 2 }}>
+
+  <h6 className="text-info fw-semibold mb-3">
+    Analiză AI Generativă
+  </h6>
+
+  {!aiText && !loadingAI && (
+   <p className="small text-secondary lh-lg mb-4" style={{ marginTop: '3rem' }}>
+
+
+
+      Generează un raport financiar inteligent în timp real pe baza datelor tale.
+      <br /><br />
+      Sistemul va analiza veniturile, cheltuielile, rata de economisire și
+      va crea un raport structurat în mai multe paragrafe,
+      împreună cu recomandări concrete pentru optimizare.
+    </p>
+  )}
+
+  {loadingAI && (
+    <div className="text-center my-4">
+      <div className="spinner-border text-success mb-3" />
+      <p className="small text-secondary">
+        AI analizează datele financiare...
+      </p>
+    </div>
+  )}
+
+  {aiText && (
+    <div className="mt-3 p-4 rounded-4 bg-dark bg-opacity-50 border border-success">
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <span className="badge bg-success">AI Generated</span>
+        <button
+          className="btn btn-sm btn-outline-light"
+          onClick={generateAIReport}
+        >
+          Generează din nou
+        </button>
+      </div>
+
+      <div style={{ whiteSpace: "pre-line" }}>
+        {aiText}
+      </div>
+    </div>
+  )}
+
+<button
+  onClick={generateAIReport}
+  disabled={loadingAI}
+  className="btn btn-success w-100 py-3 rounded-4 fw-bold border-0 mt-4 shadow-success"
+  style={{ opacity: loadingAI ? 0.7 : 1, transition: 'opacity 0.2s' }}
+>
+  {loadingAI ? "Se generează..." : aiText ? "Actualizează Analiza AI" : "Generează Raport Financiar AI"}
+</button>
+
+</div>
             </Card>
           </Col>
         </Row>
@@ -615,18 +721,34 @@ const deleteCategory = async (id) => {
               <h2 className="fw-bold mb-4 text-dark">Management Categorii</h2>
               <Row className="g-3">
                 {(categories || []).map(cat => (
-                  <Col md={3} key={cat.id}>
-                    <Card className="border-0 shadow-sm rounded-4 p-3 d-flex flex-row justify-content-between align-items-center bg-white border-hover-success transition-all shadow-sm">
-                      <span className="fw-bold text-dark">{cat.name}</span>
-                      <div className="d-flex gap-1">
-                        <Button variant="link" className="text-primary p-1 shadow-none"><Edit3 size={14}/></Button>
-                        <Button variant="link" className="text-danger p-1 shadow-none"><Trash2 size={14}/></Button>
-                      </div>
-                    </Card>
-                  </Col>
-                ))}
+  <Col md={3} key={cat.id}>
+    <Card className="border-0 shadow-sm rounded-4 p-3 d-flex flex-row justify-content-between align-items-center bg-white border-hover-success transition-all shadow-sm">
+      <span className="fw-bold text-dark">{cat.name}</span>
+      <div className="d-flex gap-1">
+        {/* BUTON EDITARE - ACUM ARE onClick */}
+        <Button 
+          variant="link" 
+          className="text-primary p-1 shadow-none"
+          onClick={() => setCategoryModal({ show: true, mode: 'edit', data: cat })}
+        >
+          <Edit3 size={14}/>
+        </Button>
+
+        {/* BUTON ȘTERGERE - ACUM ARE onClick */}
+        <Button 
+          variant="link" 
+          className="text-danger p-1 shadow-none"
+          onClick={() => deleteCategory(cat.id)}
+        >
+          <Trash2 size={14}/>
+        </Button>
+      </div>
+    </Card>
+  </Col>
+))}
                 <Col md={3}>
-                  <Card className="border-0 shadow-sm rounded-4 p-3 d-flex flex-row justify-content-center align-items-center bg-light" style={{ border: '2px dashed #cbd5e1', cursor: 'pointer' }}>
+                  <Card onClick={() => setCategoryModal({show: true,mode: 'add',data: null})} 
+                    className="border-0 shadow-sm rounded-4 p-3 d-flex flex-row justify-content-center align-items-center bg-light" style={{ border: '2px dashed #cbd5e1', cursor: 'pointer' }}>
                     <span className="text-muted fw-bold small"><PlusCircle size={14} className="me-1"/> Categorie Nouă</span>
                   </Card>
                 </Col>
@@ -636,7 +758,32 @@ const deleteCategory = async (id) => {
         </Container>
       </main>
 
-      {/* MODAL TRANZACȚIE */}
+     {/* MODAL CATEGORII - Adaugă acest bloc la finalul return-ului, înainte de ultimele </div> și ); */}
+      <Modal show={categoryModal.show} onHide={() => setCategoryModal({ ...categoryModal, show: false })} centered>
+        <Modal.Header closeButton className="border-0 bg-light p-4 rounded-top-4">
+          <Modal.Title className="fw-bold text-dark">
+            {categoryModal.mode === 'add' ? 'Categorie Nouă' : 'Editează Categoria'}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4 bg-white rounded-bottom-4">
+          <Form onSubmit={handleCategorySubmit} key={categoryModal.data?.id || 'new_cat'}>
+            <Form.Group className="mb-4">
+              <Form.Label className="small fw-bold text-muted uppercase">Nume Categorie</Form.Label>
+              <Form.Control 
+                name="name" 
+                required 
+                className="bg-light border-0 p-3 rounded-3 shadow-none" 
+                placeholder="Ex: Mâncare, Sănătate..." 
+                defaultValue={categoryModal.data?.name} 
+              />
+            </Form.Group>
+            <Button type="submit" variant="success" className="w-100 py-3 rounded-3 fw-bold border-0 shadow-lg">
+              <CheckCircle size={18} className="me-2"/> Salvează
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
+
       {/* MODAL TRANZACȚIE - Această secțiune gestionează atât adăugarea, cât și editarea */}
 <Modal show={transactionModal.show} onHide={() => setTransactionModal({ ...transactionModal, show: false })} centered>
   <Modal.Header closeButton className="border-0 bg-light p-4 rounded-top-4">
@@ -730,7 +877,7 @@ const deleteCategory = async (id) => {
         className={`w-100 py-3 rounded-3 fw-bold border-0 shadow-lg ${transactionModal.type === 'income' ? 'bg-success' : 'bg-danger'}`}
       >
         <CheckCircle size={18} className="me-2"/> 
-        {transactionModal.mode === 'add' ? 'Salvează în MySQL' : 'Actualizează Datele'}
+        {transactionModal.mode === 'add' ? 'Salvează' : 'Actualizează Datele'}
       </Button>
     </Form>
   </Modal.Body>
