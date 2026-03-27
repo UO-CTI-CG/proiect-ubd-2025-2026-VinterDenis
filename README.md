@@ -62,7 +62,7 @@ DB_DATABASE=my_budget
 PORT=3000
 
 
-Porniți serverul: node server.js.
+Porniți serverul: " node server.js ".
 
 3. Configurarea Frontend-ului
 
@@ -72,7 +72,7 @@ Navigați în folderul frontend: cd frontend.
 
 Instalați bibliotecile: npm install.
 
-Porniți interfața: npm run dev.
+Porniți interfața: " npm run dev ".
 
 Accesați aplicația la: http://localhost:5173.
 

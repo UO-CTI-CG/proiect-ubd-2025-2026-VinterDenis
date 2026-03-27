@@ -4,3 +4,6 @@ npm-debug.log*
 
 # Fisiere de Mediu si Securitate (ESENȚIAL)
 .env
+
+.DS_Store
+dist/
