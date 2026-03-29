@@ -10,7 +10,7 @@ import {
   Wallet, TrendingUp, RefreshCcw, LayoutDashboard, List, Settings, 
   Search, Trash2, Brain, Loader2, Calendar,
   Edit3, BarChart3, Info, PieChart, CheckCircle,
-  PlusCircle, ArrowUpRight, ArrowDownLeft, Plus
+  PlusCircle, ArrowUpRight, ArrowDownLeft, Plus, Menu
 } from 'lucide-react';
 // Importăm Chart.js pentru grafice
 import {
@@ -45,7 +45,7 @@ ChartJS.register(
 );
 
 // --- CONFIGURARE API ---
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const MONTHS = [
   "Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie",
@@ -83,6 +83,9 @@ export default function App() {
     mode: 'add',
     data: null
   });
+
+  // Stare pentru sidebar-ul mobil
+  const [showSidebar, setShowSidebar] = useState(false);
 
   // --- 2. LOGICĂ DINAMICĂ ANI 
   // Această listă se calculează o singură dată și asigură intervalul 2010 -> An Curent + 5
@@ -289,7 +292,8 @@ const deleteCategory = async (id) => {
   // --- 5. COMPONENTE VIZUALE ---
 
   const Sidebar = () => (
-    <div className="sidebar-container text-white min-vh-100 p-4 shadow-lg position-fixed d-flex flex-column" style={{ width: '280px', backgroundColor: '#0f172a', zIndex: 1000 }}>
+    <div className={`sidebar-container text-white min-vh-100 p-4 shadow-lg position-fixed d-flex flex-column ${showSidebar ? 'd-block' : 'd-none d-lg-block'}`} 
+         style={{ width: '280px', backgroundColor: '#0f172a', zIndex: 1050, left: 0, top: 0 }}>
       <div className="d-flex align-items-center mb-5 gap-3 px-2">
         <div className="bg-success p-2 rounded-3 text-white shadow-success">
           <Wallet size={24} />
@@ -306,7 +310,10 @@ const deleteCategory = async (id) => {
         ].map(item => (
           <Nav.Link 
             key={item.id}
-            onClick={() => setView(item.id)}
+            onClick={() => {
+              setView(item.id);
+              setShowSidebar(false); // Închide sidebar-ul pe mobil după selecție
+            }}
             className={`d-flex align-items-center gap-3 p-3 rounded-4 transition-all ${view === item.id ? 'bg-success text-white shadow-success-soft' : 'text-secondary bg-transparent hover-dark-blue'}`}
             style={{ cursor: 'pointer' }}
           >
@@ -349,7 +356,7 @@ const deleteCategory = async (id) => {
           { label: `Cheltuieli ${MONTHS[selectedMonth]}`, value: periodStats.expense, color: 'danger' },
           { label: `Profit Lună`, value: periodStats.balance, color: 'success' },
         ].map((item, i) => (
-          <Col md={3} key={i}>
+          <Col xs={12} sm={6} lg={3} key={i}>
             <Card className={`border-0 shadow-sm rounded-4 h-100 border-start border-5 border-${item.color}`}>
               <Card.Body className="p-3">
                 <div className={`text-${item.color} small fw-bold mb-1 text-uppercase tracking-wider`} style={{ fontSize: '15px' }}>{item.label}</div>
@@ -361,7 +368,7 @@ const deleteCategory = async (id) => {
       </Row>
 
       <Row className="g-4 mb-4">
-        <Col lg={8}>
+        <Col xs={12} lg={8}>
           <Card className="border-0 shadow-sm rounded-4 p-4 h-100 bg-white">
             <h5 className="fw-bold mb-4 d-flex align-items-center gap-2"><BarChart3 size={20} className="text-primary"/> Evoluție Flux Numerar</h5>
             <div style={{ height: '300px' }}>
@@ -378,7 +385,7 @@ const deleteCategory = async (id) => {
             </div>
           </Card>
         </Col>
-        <Col lg={4}>
+        <Col xs={12} lg={4}>
           <Card className="border-0 shadow-sm rounded-4 p-4 h-100 bg-white">
             <h5 className="fw-bold mb-4 d-flex align-items-center gap-2"><PieChart size={20} className="text-danger"/> Top Cheltuieli</h5>
             <div style={{ height: '240px' }}>
@@ -471,8 +478,8 @@ const AnalyticsView = () => {
     return (
       <div className="animate-in">
         <h2 className="fw-bold mb-4 text-dark">Analiză și Predicții AI</h2>
-        <Row className="g-4">
-          <Col md={8}>
+        <Row className="g-4 align-items-start">
+          <Col xs={12} md={8}>
             {/* FORECAST CARD */}
             <Card className="border-0 shadow-sm rounded-4 p-5 bg-white mb-4">
               <h5 className="fw-bold mb-4 d-flex align-items-center gap-3">
@@ -481,14 +488,16 @@ const AnalyticsView = () => {
               <p className="text-muted small mb-4">Algoritmul estimează evoluția averii tale bazat pe media profitului lunar.</p>
               {(forecast || []).length > 0 ? (
                 forecast.map((f, i) => (
-                  <div key={i} className="p-4 bg-light rounded-4 d-flex justify-content-between align-items-center mb-3 border border-white shadow-sm">
-                    <div className="d-flex align-items-center gap-3">
-                      <div className="bg-success bg-opacity-10 p-2 rounded-3 text-success"><Calendar size={20}/></div>
-                      <span className="fw-bold text-dark fs-5">Peste {f.month_projection} {f.month_projection === 1 ? 'lună' : 'luni'}</span>
+                  <div key={i} className="p-3 p-md-4 bg-light rounded-4 mb-3 border border-white shadow-sm">
+                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                      <div className="d-flex align-items-center gap-3">
+                        <div className="bg-success bg-opacity-10 p-2 rounded-3 text-success"><Calendar size={20}/></div>
+                        <span className="fw-bold text-dark fs-6 fs-md-5">Peste {f.month_projection} {f.month_projection === 1 ? 'lună' : 'luni'}</span>
+                      </div>
+                      <span className="h5 h4-md mb-0 fw-bold text-success text-nowrap">
+                        {formatRON(Number(f.projected_sold) || 0)}
+                      </span>
                     </div>
-                    <span className="h4 mb-0 fw-bold text-success">
-                      {formatRON(Number(f.projected_sold) || 0)}
-                    </span>
                   </div>
                 ))
               ) : (
@@ -526,70 +535,66 @@ const AnalyticsView = () => {
           </Col>
 
           {/* SMART ADVISOR CARD */}
-          <Col md={4}>
-            <Card className="border-0 shadow-sm rounded-4 text-white p-4 h-100 position-relative overflow-hidden shadow-lg" style={{ backgroundColor: '#0f172a' }}>
+          <Col xs={12} md={4}>
+            <Card className="border-0 shadow-sm rounded-4 text-white p-4 position-relative overflow-hidden shadow-lg smart-advisor-card" style={{ backgroundColor: '#0f172a' }}>
               <div className="position-absolute top-0 end-0 p-3 opacity-10"><Brain size={73}/></div>
               <h5 className="fw-bold mb-3 d-flex align-items-center gap-2"><Info size={20} className="text-info"/> Smart Advisor</h5>
 
+              <div className="position-relative h-100 d-flex flex-column smart-advisor-content" style={{ zIndex: 2 }}>
 
+                <h6 className="text-info fw-semibold mb-3">
+                  Analiză AI Generativă
+                </h6>
 
+                {!aiText && !loadingAI && (
+                 <p className="small text-secondary lh-lg mb-4 flex-grow-1">
+                    Generează un raport financiar inteligent în timp real pe baza datelor tale.
+                    <br /><br />
+                    Sistemul va analiza veniturile, cheltuielile, rata de economisire și
+                    va crea un raport structurat în mai multe paragrafe,
+                    împreună cu recomandări concrete pentru optimizare.
+                  </p>
+                )}
 
-<div className="position-relative" style={{ zIndex: 2 }}>
+                {loadingAI && (
+                  <div className="text-center my-4 flex-grow-1 d-flex flex-column justify-content-center">
+                    <div className="spinner-border text-success mb-3" />
+                    <p className="small text-secondary">
+                      AI analizează datele financiare...
+                    </p>
+                  </div>
+                )}
 
-  <h6 className="text-info fw-semibold mb-3">
-    Analiză AI Generativă
-  </h6>
+                {aiText && (
+                  <div className="mt-3 flex-grow-1 d-flex flex-column">
+                    <div className="p-3 rounded-4 bg-dark bg-opacity-50 border border-success flex-grow-1 d-flex flex-column">
+                      <div className="d-flex justify-content-between align-items-center mb-3">
+                        <span className="badge bg-success">AI Generated</span>
+                        <button
+                          className="btn btn-sm btn-outline-light"
+                          onClick={generateAIReport}
+                        >
+                          Generează din nou
+                        </button>
+                      </div>
 
-  {!aiText && !loadingAI && (
-   <p className="small text-secondary lh-lg mb-4" style={{ marginTop: '3rem' }}>
+                      <div className="flex-grow-1 overflow-auto" style={{ whiteSpace: "pre-line" }}>
+                        {aiText}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
+                <button
+                  onClick={generateAIReport}
+                  disabled={loadingAI}
+                  className="btn btn-success w-100 py-3 rounded-4 fw-bold border-0 mt-3 shadow-success"
+                  style={{ opacity: loadingAI ? 0.7 : 1, transition: 'opacity 0.2s' }}
+                >
+                  {loadingAI ? "Se generează..." : aiText ? "Actualizează Analiza AI" : "Generează Raport Financiar AI"}
+                </button>
 
-
-      Generează un raport financiar inteligent în timp real pe baza datelor tale.
-      <br /><br />
-      Sistemul va analiza veniturile, cheltuielile, rata de economisire și
-      va crea un raport structurat în mai multe paragrafe,
-      împreună cu recomandări concrete pentru optimizare.
-    </p>
-  )}
-
-  {loadingAI && (
-    <div className="text-center my-4">
-      <div className="spinner-border text-success mb-3" />
-      <p className="small text-secondary">
-        AI analizează datele financiare...
-      </p>
-    </div>
-  )}
-
-  {aiText && (
-    <div className="mt-3 p-4 rounded-4 bg-dark bg-opacity-50 border border-success">
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <span className="badge bg-success">AI Generated</span>
-        <button
-          className="btn btn-sm btn-outline-light"
-          onClick={generateAIReport}
-        >
-          Generează din nou
-        </button>
-      </div>
-
-      <div style={{ whiteSpace: "pre-line" }}>
-        {aiText}
-      </div>
-    </div>
-  )}
-
-<button
-  onClick={generateAIReport}
-  disabled={loadingAI}
-  className="btn btn-success w-100 py-3 rounded-4 fw-bold border-0 mt-4 shadow-success"
-  style={{ opacity: loadingAI ? 0.7 : 1, transition: 'opacity 0.2s' }}
->
-  {loadingAI ? "Se generează..." : aiText ? "Actualizează Analiza AI" : "Generează Raport Financiar AI"}
-</button>
-
-</div>
+              </div>
             </Card>
           </Col>
         </Row>
@@ -609,7 +614,7 @@ const AnalyticsView = () => {
     <div className="bg-light min-vh-100 d-flex" style={{ fontFamily: "'Inter', sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-        body { background-color: #f8f9fa; margin: 0; }
+        body { background-color: #f8f9fa; margin: 0; position: relative; }
         .hover-dark-blue:hover { background-color: rgba(255, 255, 255, 0.05); color: #fff !important; }
         .shadow-success { box-shadow: 0 10px 15px -3px rgba(34, 197, 94, 0.3); }
         .shadow-success-soft { box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.2); }
@@ -619,19 +624,118 @@ const AnalyticsView = () => {
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .main-content { 
+          position: absolute; 
+          top: 0; 
+          left: 0; 
+          right: 0; 
+          bottom: 0; 
+          overflow-y: auto; 
+        }
+        @media (min-width: 992px) { 
+          .main-content { 
+            left: 280px; 
+            right: 0; 
+          } 
+        }
+        .main-content .container-fluid { max-width: none; padding-left: 1.5rem; padding-right: 1.5rem; }
+        @media (min-width: 576px) { .main-content .container-fluid { padding-left: 2rem; padding-right: 2rem; } }
+        @media (min-width: 768px) { .main-content .container-fluid { padding-left: 2.5rem; padding-right: 2.5rem; } }
+        @media (min-width: 992px) { .main-content .container-fluid { padding-left: 3rem; padding-right: 3rem; } }
+        .responsive-filters { min-width: auto; }
+        @media (min-width: 992px) { .responsive-filters { min-width: 310px; } }
+        .responsive-search { width: 200px; }
+        @media (min-width: 992px) { .responsive-search { width: 300px; } }
+        .smart-advisor-card { min-height: 740px; }
+        @media (max-width: 991px) { .smart-advisor-card { min-height: 700px; } }
+        @media (max-width: 767px) { .smart-advisor-card { min-height: 560px; } }
+        .smart-advisor-content { display: flex; flex-direction: column; height: calc(100% - 80px); }
+        .smart-advisor-text { overflow-y: auto; flex-grow: 1; }
       `}</style>
       
       <Sidebar />
       
-      <main style={{ marginLeft: '280px', width: 'calc(100% - 280px)' }} className="p-5">
+      {/* Overlay pentru sidebar pe mobil */}
+      {showSidebar && (
+        <div 
+          className="d-lg-none position-fixed" 
+          style={{ 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            backgroundColor: 'rgba(0,0,0,0.5)', 
+            zIndex: 1040 
+          }}
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
+      
+      <main className="main-content p-3 p-lg-5">
         <Container fluid>
           {error && <Alert variant="danger" className="border-0 shadow-sm rounded-4 mb-4 animate-in"><b>Atenție:</b> {error}</Alert>}
 
           {/* TOP BAR FILTRE */}
           <Card className="border-0 shadow-sm rounded-4 mb-5 bg-white p-3">
-            <div className="d-flex align-items-center justify-content-between">
-              <div className="d-flex gap-4 align-items-center bg-light p-1 rounded-3 justify-content-center text-center" style={{ minWidth: '310px' }}>
-                <Calendar size={18} className="text-success ms-2" />
+            <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-2">
+              {/* Rând 1 (mobil): Hamburger + Căutare */}
+              <div className="d-flex d-md-none w-100 justify-content-between align-items-center gap-2">
+                {/* Hamburger Menu pentru mobil */}
+                <Button 
+                  variant="link" 
+                  className="d-md-none text-dark p-2" 
+                  onClick={() => setShowSidebar(!showSidebar)}
+                  style={{ border: 'none', background: 'none' }}
+                >
+                  <Menu size={24} />
+                </Button>
+
+                <InputGroup size="sm" className="responsive-search flex-grow-1">
+                  <InputGroup.Text className="bg-light border-0"><Search size={14}/></InputGroup.Text>
+                  <Form.Control placeholder="Caută..." className="bg-light border-0 shadow-none" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                </InputGroup>
+              </div>
+
+              {/* Hamburger + Luna/An (tabletă+) */}
+              <div className="d-none d-md-flex w-100 w-md-auto align-items-center justify-content-between gap-2">
+                <div className="d-flex gap-2 gap-md-3 gap-lg-4 align-items-center bg-light p-1 rounded-3 justify-content-center text-center responsive-filters">
+                  <Calendar size={50} className="text-success ms-2" />
+                  <Form.Select size="sm" className="border-0 bg-transparent fw-bold shadow-none" value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))}>
+                    {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                  </Form.Select>
+                  <Form.Select 
+
+    size="sm" 
+    className="border-0 bg-transparent fw-bold shadow-none cursor-pointer" 
+    value={selectedYear} 
+    onChange={e => setSelectedYear(Number(e.target.value))}
+  >
+    {yearsList.map(y => (
+      <option key={y} value={y}>{y}</option>
+    ))}
+  </Form.Select>
+                </div>
+
+                <div className="d-flex align-items-center gap-2">
+                  <InputGroup size="sm" className="responsive-search">
+                    <InputGroup.Text className="bg-light border-0"><Search size={14}/></InputGroup.Text>
+                    <Form.Control placeholder="Caută..." className="bg-light border-0 shadow-none" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                  </InputGroup>
+
+                  <Button 
+                    variant="link" 
+                    className="d-md-block d-lg-none text-dark p-2" 
+                    onClick={() => setShowSidebar(!showSidebar)}
+                    style={{ border: 'none', background: 'none' }}
+                  >
+                    <Menu size={24} />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Rând 2 (mobil): Luna + An */}
+              <div className="d-md-none w-100 d-flex gap-2 align-items-center bg-light p-1 rounded-3 justify-content-center text-center">
+                <Calendar size={50} className="text-success ms-2" />
                 <Form.Select size="sm" className="border-0 bg-transparent fw-bold shadow-none" value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))}>
                   {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
                 </Form.Select>
@@ -646,10 +750,6 @@ const AnalyticsView = () => {
   ))}
 </Form.Select>
               </div>
-              <InputGroup size="sm" style={{ width: '300px' }}>
-                <InputGroup.Text className="bg-light border-0"><Search size={14}/></InputGroup.Text>
-                <Form.Control placeholder="Caută..." className="bg-light border-0 shadow-none" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-              </InputGroup>
             </div>
           </Card>
 
@@ -721,7 +821,7 @@ const AnalyticsView = () => {
               <h2 className="fw-bold mb-4 text-dark">Management Categorii</h2>
               <Row className="g-3">
                 {(categories || []).map(cat => (
-  <Col md={3} key={cat.id}>
+  <Col xs={12} sm={6} md={4} lg={3} key={cat.id}>
     <Card className="border-0 shadow-sm rounded-4 p-3 d-flex flex-row justify-content-between align-items-center bg-white border-hover-success transition-all shadow-sm">
       <span className="fw-bold text-dark">{cat.name}</span>
       <div className="d-flex gap-1">
@@ -746,7 +846,7 @@ const AnalyticsView = () => {
     </Card>
   </Col>
 ))}
-                <Col md={3}>
+                <Col xs={12} sm={6} md={4} lg={3}>
                   <Card onClick={() => setCategoryModal({show: true,mode: 'add',data: null})} 
                     className="border-0 shadow-sm rounded-4 p-3 d-flex flex-row justify-content-center align-items-center bg-light" style={{ border: '2px dashed #cbd5e1', cursor: 'pointer' }}>
                     <span className="text-muted fw-bold small"><PlusCircle size={14} className="me-1"/> Categorie Nouă</span>
@@ -827,7 +927,7 @@ const AnalyticsView = () => {
       </Form.Group>
 
       <Row>
-        <Col md={6}>
+        <Col xs={12} md={6}>
           <Form.Group className="mb-3">
             <Form.Label className="small fw-bold text-muted uppercase">Suma</Form.Label>
             <Form.Control 
@@ -840,7 +940,7 @@ const AnalyticsView = () => {
             />
           </Form.Group>
         </Col>
-        <Col md={6}>
+        <Col xs={12} md={6}>
           <Form.Group className="mb-3">
             <Form.Label className="small fw-bold text-muted uppercase">Data</Form.Label>
             <Form.Control 

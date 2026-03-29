@@ -60,28 +60,27 @@ Răspunde doar în română.
 
     let aiText = null;
     let modelError = null;
+    // Modelele care FUNCȚIONEAZĂ - gemini-2.0-flash și lite sunt disponibile
     const modelCandidates = [
-      { model: "gemini-2.5-flash", apiVersion: "v1" },
-      { model: "gemini-2.5-pro", apiVersion: "v1" },
-      { model: "gemini-3-flash", apiVersion: "v1" },
-      { model: "gemini-3.1-pro-preview", apiVersion: "v1" }
+      "gemini-2.0-flash",
+      "gemini-2.0-flash-lite"
     ];
 
-    for (const candidate of modelCandidates) {
+    for (const modelName of modelCandidates) {
       try {
-        console.log(`🧠 Încercare model: ${candidate.model} (${candidate.apiVersion})...`);
-        const model = genAI.getGenerativeModel({ model: candidate.model }, { apiVersion: candidate.apiVersion });
+        console.log(`🧠 Încercare model: ${modelName}...`);
+        const model = genAI.getGenerativeModel({ model: modelName });
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
         if (text) {
           aiText = text;
-          console.log(`✅ SUCCES cu modelul: ${candidate.model}`);
+          console.log(`✅ SUCCES cu modelul: ${modelName}`);
           break;
         }
       } catch (err) {
         modelError = err;
-        console.warn(`⚠️ Modelul ${candidate.model} a eșuat:`, err.message);
+        console.warn(`⚠️ Modelul ${modelName} a eșuat:`, err.message);
       }
     }
 
